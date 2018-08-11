@@ -1,0 +1,193 @@
+---
+title: "Quantifying the Costs of an Increase in the Minimum Wage: Prototype A Fully Reproducible Exercise [TOY EXAMPLE, NOT REAL DATA: do not cite]"
+author: "Fernando Hoces de la Guardia"
+output: html_document
+runtime: shiny
+---
+## Under which conditions should an increse in the minimum wage be implemented?  
+
+This toy example is based on a report by CBO that can be [found here][link2]   
+
+[link2]: https://www.cbo.gov/sites/default/files/113th-congress-2013-2014/reports/44995-MinimumWage_OneColumn.pdf  
+
+
+**[Caveat: The final output will be presented in layers of complexity: The first layer will only include the key assumptions and sample possitionts (\"Bernie\"  \&  \"Donald\"). The second layer will allow the user to choose values of the key parameters within a prespecified range. The third layer will detail the model used. The fourth layer will present the code]**
+
+### Assumptions  
+ - No Effects on informality
+ - No effect on hours. 
+
+### Benefits
+ - $B_{1}$: Increase in income of low wage families
+ - $B_{2}$: Increase in economic activity due to increase consumption of beneficiaries of a higher min wage. 
+
+### Costs
+ - $C_{1}$: Decrease in income of low wage families 
+ - $C_{2}$: Decrease in economic activity due to some business closing and lower consumption of families with newly unemployed or less profitable business. 
+
+### Policy Equation
+
+$$
+\begin{aligned}
+W &= \sum_{i  = 1 }^{N} w^{b}_{i} E[B_{i}] - \sum_{j  = 1 }^{M} w^{c}_{j} E[C_{j}]\\
+E[B_{1}] &= f_{1}(\beta_{1})\\
+\dots \\
+E[B_{N}] &= f_{N}(\beta_{N})\\
+E[C_{1}] &= g_{1}(\gamma_{1})\\
+\dots \\
+E[C_{N}] &= g_{M}(\gamma_{M})
+\end{aligned}
+$$
+
+
+#### Benefits
+ - $B_{1}$: Some family income increases because a fraction $\alpha$ of the people who were who were earning ($w$) between the old minimum wage ($w_{min}^{0}$) and the new, higher, minimum wage ($w_{min}^{1}$) now earn more ($w_{min}^{1} - w$) per hour. 
+$$
+\begin{aligned}
+E[B_{1}] &= \alpha N \int_{w < w_{min}^{1}} (w  -  w_{min}^{1} )dF_{w}
+\end{aligned}
+$$
+
+The fraction $\alpha$ depends on the elasticity of labor demand $\varepsilon$ in the following way:
+
+$$
+\begin{aligned}
+\alpha &= \frac{w_{min}^{1} - w_{min}^{0}}{w_{min}^{0}} \varepsilon
+\end{aligned}
+$$
+
+
+ - $B_{2}$: Higher disposable income increases consumption for households with the new wage. Families consume a fraction $c^1$ and save the rest.    
+$$
+\begin{aligned}
+E[B_{2}] &= c^1 E[B_{1}]
+\end{aligned}
+$$
+
+
+#### Costs
+ - $C_{1}$: Some family income decreases because a fraction $(1 - \alpha)$ of the people who were who were earning ($w$) between the old minimum wage ($w_{min}^{0}$) and the new, higher, minimum wage ($w_{min}^{1}$) now earn 0. 
+$$
+\begin{aligned}
+E[C_{1}] &= (1 - \alpha) N \int_{w < w_{min}^{1}} ( w_{min}^{0} - 0 )dF_{w}
+\end{aligned}
+$$
+ - $C_{2}$: Lower disposable income decreases consumption for households with members that lose their jobs or those with businesses that reduce profits or close ($\Delta^{-}\pi$). The group of that looses income reduces consumption in a fraction $c^2$
+$$
+\begin{aligned}
+E[C_{2}] &= c^2 ( E[C_{1}] + \Delta^{-}\pi)
+\end{aligned}
+$$
+
+
+Finally policy makers may choose to weigh costs and benefits differently, depending on components outside the reach of the evidence gathered here. This different valuations are captured in the weights $w^{b}_{\cdot}, w^{c}_{\cdot}$ set by default to 1. The only requirement is that such values should be recorded and tracked as part of the overall decision of any stakeholder. 
+
+
+```{r, echo=FALSE}
+inputPanel(
+  sliderInput("param1", label = "n.workers",
+              min = 1e4, max = 1e6, value = c(1e5,5e5) , step = 1e4), 
+  sliderInput("param2", label = "elasticity",
+              min = 0.01, max = 1,  value = c(.1,.3), step = .01), 
+  sliderInput("param3", label = "marg.cons1",
+              min = 0.6, max = .8, value = c(.7,.75), step = 0.01),
+  sliderInput("param4", label = "marg.cons2",
+              min = 0.5, max = .7, value = c(.55,.65), step = 0.01), 
+  sliderInput("param5", label = "profit.loss",
+              min = 1e7, max = 1e9, value = c(1e8,5e8), step = 1e7),
+  sliderInput("param6", label = "POLICY PARAMETER: min.wage",
+              min = 7, max = 20, value = 15, step = 1)
+
+)
+
+welfare.eff <- function(n.workers.par, 
+                        elasticity.par, 
+                        marg.cons1.par, 
+                        marg.cons2.par, 
+                        loss.profit.par, 
+                        min.wage.par) {
+  n.workers.par <- round(n.workers.par * min.wage.par/10)
+  fraction.job.loss.par <-((min.wage.par - 7)/7) * elasticity.par
+  pool.workers <- runif(n.workers.par, min = 7, max = min.wage.par)
+  fired <- sample(1:n.workers.par, round(n.workers.par * fraction.job.loss.par))
+  direct.effect <- ( sum(min.wage.par - pool.workers[- fired]) - sum(pool.workers[fired]) ) * 40 * 48 - loss.profit.par
+  indirect.effect <- marg.cons1.par * direct.effect - marg.cons2.par * loss.profit.par
+  return(direct.effect + indirect.effect)
+}
+
+toy.costs <- function(sims = 100,
+                      n.workers.par = c(1e4,1e6), 
+                      elasticity.par = c(0.01, 1) , 
+                      marg.cons1.par = c(0.6,0.8), 
+                      marg.cons2.par = c(0.5,0.7), 
+                      profit.loss.par = c(1e7,1e9), 
+                      min.wage.par = 10
+                      ) 
+{
+
+  n.workers <- runif(sims, min = n.workers.par[1], max = n.workers.par[2])
+  elasticity <- runif(sims,min = elasticity.par[1], max = elasticity.par[2])
+  marg.cons1 <- runif(sims, min =marg.cons1.par[1], max = marg.cons1.par[2])
+  marg.cons2 <- runif(sims, min =marg.cons2.par[1], max = marg.cons2.par[2])
+  profit.loss <- runif(sims, min =profit.loss.par[1], max = profit.loss.par[2])
+
+  res1 <- sapply(1:sims, function(x) welfare.eff(n.workers[x], elasticity[x],
+                                      marg.cons1[x], marg.cons2[x], profit.loss[x], min.wage.par) ) / 1e9
+
+  return(res1)
+} 
+
+
+
+renderPlot({
+  set.seed(123)
+  W.val <- toy.costs(sims = 100, 
+                      n.workers.par = as.numeric(input$param1), 
+                      elasticity.par  = as.numeric(input$param2),
+                      marg.cons1.par = as.numeric(input$param3),
+                      marg.cons2.par = as.numeric(input$param4), 
+                      profit.loss.par = as.numeric(input$param5), 
+                      min.wage.par = as.numeric(input$param6))
+  
+  
+hist(W.val, breaks = 20, probability = TRUE, xlim =c(-10,10), ylim = c(0,.5),
+     main = "Welfare Effects of Increasing the Minimun Wage: Toy Example", xlab = "$ Billions ")
+abline(v=0, cex=3, col ="red")})
+```
+
+
+### How can policy makers use this framework?   
+
+Under this framework different policy makers can:  
+  - Agree with the model and present the parameters that supports their choice.   
+  - Disagree with the model and suggest improvements (add parameters, change relevant ranges). The new parameters/ranges have to support their choice.   
+  - Disagree with the model and suggest a competing one. All competing models should be linked in the website and there should be some type of record of chosen models and parameters (think [stackexchange.com][link3]   )  
+  
+
+[link3]: http://stackexchange.com/   
+
+
+
+  
+### How can researchers use this framework?  
+This framework should allow researchers to easily identify the gaps of knowledge related to policy decisions. For example:  
+  - Wide ranges for key parameters.  
+  - Lacking features in the model that have the largest effect on final decisions.   
+  - Observe how the model that describes the understanding and description of the policy problem evolves over time. 
+  
+### Elements to add to the tool 
+
+[open source format][link1]   
+
+[link1]: https://github.com/fhoces/policy-tool-rmd
+
+Later versions of this framework should link each slider with a drop down menu for the relevant literature. 
+
+To add also  
+  - Text box for people to add dimensions, citations and values.  
+  - Text box with reference to competing models.    
+  - Feature to record the values choosen (so users can say/suggest \"This is my/your position\")     
+  
+  
+  
+

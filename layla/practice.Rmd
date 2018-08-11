@@ -1,0 +1,60 @@
+---
+title: "Choosing Parameters for Simulations"
+resource_files:
+- apps/app1/app.R
+- apps/app2/app.R
+runtime: shiny
+output: html_document
+---
+
+## Simulation I
+
+$$
+\begin{aligned}
+T &= Binomial(0.3)\\
+X &\sim N(-0.25 + \gamma_{1}  , \sigma_{t}^2) \mbox{ in treatment group}\\
+X &\sim N(-0.25, \sigma_{c}^2) \mbox{ in control group}\\
+Z &\sim Exp(\gamma_{2}) \mbox{ in treatment group}\\
+Z &\sim Exp(\gamma_{3}) \mbox{ in control group}\\
+Y &= \beta_{1}\exp(scale * X) + \beta_{2}Z + N(0,\sigma_{1})
+\end{aligned}
+$$
+
+
+```{r Sim I, echo=FALSE}
+#install.packages(c("ISLR", "tree", "randomForest", "ipred", "CBPS"), repos = 'http://cran.us.r-project.org')
+
+shinyAppDir(
+ "apps/app1", 
+  options=list(
+    width="100%", height=550
+  )
+)
+```  
+  
+  
+## Simulation II
+
+$$
+\begin{aligned}
+Y           &= \tau T  + \beta_{1} f(x) + \varepsilon_{1} \nonumber \\
+\\
+Pr(T = 1)   &= \frac{1}{1 + exp(- (\gamma_{1}x  + \gamma_{2}z) )}  \nonumber \\
+\\
+T &= \textbf{I} \left( Pr(T = 1) > 1/2 + \varepsilon_{2} \right) \\
+\\
+x, z  &\sim N(0,1); \quad \varepsilon_{i} \sim N(0,\sigma^{2}_{i}), \quad i=1,2\\
+f(x)        &= exp(x/s) - \overline{exp(x/s)}\\
+\end{aligned}
+$$
+
+```{r Sim II, echo=FALSE}
+shinyAppDir(
+ "apps/app2",
+  options=list(
+    width="100%", height=550
+  )
+)
+```
+
+
