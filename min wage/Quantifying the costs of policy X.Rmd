@@ -110,7 +110,8 @@ welfare.eff <- function(n.workers.par,
   fraction.job.loss.par <-((min.wage.par - 7)/7) * elasticity.par
   pool.workers <- runif(n.workers.par, min = 7, max = min.wage.par)
   fired <- sample(1:n.workers.par, round(n.workers.par * fraction.job.loss.par))
-  direct.effect <- ( sum(min.wage.par - pool.workers[- fired]) - sum(pool.workers[fired]) ) * 40 * 48 - loss.profit.par
+  direct.effect <- ( sum(min.wage.par - pool.workers[- fired]) - 
+                       sum(pool.workers[fired]) ) * 40 * 48 - loss.profit.par
   indirect.effect <- marg.cons1.par * direct.effect - marg.cons2.par * loss.profit.par
   return(direct.effect + indirect.effect)
 }
